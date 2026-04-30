@@ -36,8 +36,8 @@ case "$CMD" in
     git rev-parse --abbrev-ref HEAD
     ;;
   base-candidates)
-    # List candidate base branches
-    git branch -r --list '*/main' '*/master' 2>/dev/null | sed 's|.*/||' | sort -u
+    # List candidate base branches (main, master, release_prod, prod, develop)
+    git branch -r --list '*/main' '*/master' '*/release_prod' '*/prod' '*/develop' 2>/dev/null | sed 's|.*/||' | sort -u
     ;;
   *)
     echo "Usage: diff-helper.sh {files|diff|module|branch|base-candidates} [args...]" >&2

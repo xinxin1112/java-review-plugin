@@ -48,23 +48,33 @@ Map specification markers to severity levels:
 
 Before executing any sub-command, check if this is the first run:
 
-1. Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh base-candidates` to detect candidate base branches
+1. Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh base-candidates` to detect candidate base branches (main/master/release_prod/prod/develop)
 2. Check if any `docs/project-standards.md` exists in the project
 3. If not found:
-   a. Ask the user to confirm the base branch name (main/master/other)
-   b. Run `/java-review init` automatically to scan architecture and generate `docs/project-standards.md` for each module
-   c. If user explicitly skips init, create a minimal `docs/project-standards.md` with just the base_branch setting
+   a. If multiple candidates detected, ask user to select the base branch (AskUserQuestion with options)
+   b. If one candidate detected, confirm with user: "检测到主分支为 {branch}，是否正确？"
+   c. If no candidates detected, ask user to manually input the base branch name
+   d. Run `/java-review init` automatically to scan architecture and generate `docs/project-standards.md` for selected modules
+   e. If user explicitly skips init, create a minimal `docs/project-standards.md` with just the base_branch setting
 
 ## Module Confirmation (multi-module projects)
 
-Before scanning, detect and confirm module scope. This applies to EVERY run, not just first-time:
+Detect and confirm module scope. Behavior differs between first-time init and subsequent runs:
 
 1. **Detect project structure**:
    - Check for `settings.gradle` / `settings.gradle.kts` → Gradle multi-module
    - Check for `pom.xml` with `<modules>` → Maven multi-module
-2. **If multi-module**: list all detected modules and ask user to confirm which modules to include in this review
-3. **If single-module**: use project root as the only module, no confirmation needed
-4. Only scan changed files that belong to confirmed modules
+2. **If single-module**: use project root as the only module, no confirmation needed
+3. **If multi-module (first-time init)**:
+   - List all detected modules
+   - Ask user to select which modules to initialize (AskUserQuestion with multiSelect)
+   - Only init selected modules; unselected modules are skipped entirely
+4. **If multi-module (subsequent review runs)**:
+   - Identify which modules already have `docs/project-standards.md` (已初始化)
+   - Only review changed files belonging to已初始化 modules
+   - If diff contains changes in未初始化 modules, prompt user: "以下模块尚未初始化：{modules}，是否现在初始化？"
+     - If yes → run init for those modules, then include in review
+     - If no → skip those modules, only review已初始化 modules
 
 ## Batch Scan Mode (default, no arguments)
 
@@ -133,7 +143,7 @@ Do NOT modify any source code in this mode.
 ## Init Mode (`init` argument)
 
 1. **Module confirmation**: Run the Module Confirmation steps above to determine which modules to initialize
-2. **For each confirmed module**, scan `src/main/java/` directory:
+2. **For each selected module**, scan `src/main/java/` directory:
    a. List all packages using `find {module}/src/main/java -type d`
    b. Auto-classify packages by name:
       - controller, api → 接口层
@@ -145,17 +155,21 @@ Do NOT modify any source code in this mode.
       - dto, vo, request, response → 数据传输对象
       - common, util, helper → 公共工具
       - interceptor, filter, aspect → 切面/拦截器
-   c. For unrecognized packages, ask the user via AskUserQuestion
-3. **Scan dependencies**:
+   c. Collect all unrecognized packages across all modules into a single list
+3. **Batch confirm unrecognized packages** (if any):
+   - Present the full list of unrecognized packages to user in one AskUserQuestion
+   - Format: `{module}/{package-path} → ?` for each unrecognized package
+   - User can assign layer classification or mark as "忽略"
+4. **Scan dependencies**:
    - Read `build.gradle` or `pom.xml` for each module
    - Identify: Spring Boot version, ORM (MyBatis/JPA), cache (Redis), MQ (Kafka/RocketMQ), database
-4. **Generate `docs/project-standards.md`** for each module with:
+5. **Generate `docs/project-standards.md`** for each module with:
    - Frontmatter: project name, build tool, base branch, timestamps
    - Module structure table
    - Layer architecture table with responsibilities and conventions
    - Tech stack table
    - Project-level coding conventions (inferred from structure)
-5. **Ask user to review** the generated standards and confirm
+6. **Ask user to review** the generated standards and confirm
 
 ## Cross-Module Duplicate Detection
 
