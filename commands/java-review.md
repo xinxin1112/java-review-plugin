@@ -18,10 +18,39 @@ Parse `$ARGUMENTS` to determine the sub-command:
 
 ## Reference Files
 
-The following reference files are bundled with this command. Read them as needed:
+Rule files are split by category under `${CLAUDE_PLUGIN_ROOT}/references/`. Load only the categories relevant to the current file being reviewed (see Rule Loading Mapping Table below).
 
-- `${CLAUDE_PLUGIN_ROOT}/references/bilibili-standards.md` — Bilibili development standards (HIGHEST priority, B-001 ~ B-107)
-- `${CLAUDE_PLUGIN_ROOT}/references/alibaba-huangshan.md` — Alibaba Java Handbook Huangshan Edition (BASELINE priority, A-001 ~ A-057)
+**Alibaba categories** (`references/alibaba/`):
+- `naming.md` — A-001~A-010 命名风格
+- `constants.md` — A-011~A-012 常量定义
+- `format.md` — A-013~A-015 代码格式
+- `oop.md` — A-016~A-023 OOP 规约
+- `collections.md` — A-024~A-029 集合处理
+- `concurrency.md` — A-030~A-034 并发处理
+- `control.md` — A-035~A-038 控制语句
+- `exception.md` — A-039~A-043 异常处理
+- `logging.md` — A-044~A-046 日志规约
+- `unit-test.md` — A-047~A-050 单元测试
+- `security.md` — A-051~A-055 安全规约
+- `project-structure.md` — A-056~A-057 工程结构（仅 init 时使用）
+
+**Bilibili categories** (`references/bilibili/`):
+- `code-commit.md` — B-001~B-006, B-107 代码提交规范
+- `db-naming.md` — B-007~B-013 数据库命名规范
+- `db-table-design.md` — B-014~B-022 表设计规范
+- `db-column-design.md` — B-023~B-031 列设计规范
+- `db-index.md` — B-032~B-035 索引+DDL 规范
+- `db-sql-dev.md` — B-036~B-055 SQL 开发规范
+- `db-recommendations.md` — B-056~B-064 强烈建议+尽量避免
+- `db-forbidden.md` — B-065~B-074 绝对禁止
+- `sql-writing.md` — B-075~B-084 语句书写规范
+- `db-operation.md` — B-085~B-088 程序操作数据库规范
+- `behavior.md` — B-089~B-092 行为规范
+- `sharding.md` — B-093 分库分表命名
+- `field-types.md` — B-102~B-103 常用字段数据类型
+- `code-review.md` — B-094~B-106 CR 规范
+
+**Other references:**
 - `${CLAUDE_PLUGIN_ROOT}/references/review-templates.md` — Output document format templates
 
 Helper script:
@@ -30,9 +59,9 @@ Helper script:
 ## Three-Layer Specification Priority
 
 ```
-Priority 1 (HIGHEST): Bilibili standards (references/bilibili-standards.md)
+Priority 1 (HIGHEST): Bilibili standards (references/bilibili/)
 Priority 2:           Project standards ({module}/docs/project-standards.md)
-Priority 3 (BASELINE): Alibaba Huangshan (references/alibaba-huangshan.md)
+Priority 3 (BASELINE): Alibaba Huangshan (references/alibaba/)
 ```
 
 When rules conflict, higher priority wins. Rules from lower priority that are not overridden still apply.
@@ -43,6 +72,45 @@ Map specification markers to severity levels:
 - **error**: 【强制】【必须】【绝对禁止】【禁止】
 - **warning**: 【推荐】【强烈建议】
 - **info**: 【可选】【尽量避免】
+
+## Rule Loading Mapping Table
+
+Do NOT load all rule files for every file. Use this two-level mapping to determine which categories to load:
+
+### Level 1: File Type
+
+| File Pattern | Load Strategy |
+|---|---|
+| `*.java` | Use Level 2 (layer mapping) below |
+| `*.sql` | Alibaba: (none). Bilibili: db-naming, db-table-design, db-column-design, db-index, db-sql-dev, db-recommendations, db-forbidden, sql-writing, field-types, sharding |
+| `*.xml` (MyBatis mapper) | Alibaba: (none). Bilibili: db-sql-dev, db-recommendations, db-forbidden, sql-writing |
+
+### Level 2: Java File Layer Mapping
+
+Detect layer from the file's package path (match keywords). Then load:
+
+| Layer | Alibaba | Bilibili |
+|---|---|---|
+| controller / api | naming, format, oop, control, exception, logging, security | code-commit, code-review |
+| service / biz | naming, format, oop, collections, concurrency, control, exception, logging | code-commit, db-operation |
+| dao / mapper / repository | naming, format, oop, exception | code-commit, db-naming, db-sql-dev, db-operation |
+| entity / model / po | naming, format, oop | code-commit, db-naming |
+| dto / vo / request / response | naming, format, oop | code-commit |
+| config / configuration | naming, format, security | code-commit |
+| common / util / helper | naming, constants, format, oop, collections, concurrency, control | code-commit |
+| test (src/test/) | naming, format, unit-test | code-commit |
+| (默认/未识别) | naming, constants, format, oop, control, exception, logging | code-commit |
+
+### Caching
+
+Within a single review session, cache already-read rule files. If a category file was loaded for a previous file in the same session, do not re-read it.
+
+### Project Standards Selective Loading
+
+When reading `{module}/docs/project-standards.md`:
+1. Always read: frontmatter + module structure table + 项目级编码约定 section
+2. Only read the layer section matching the current file's detected layer (e.g., `### 接口层` for controller files)
+3. If no section markers found (old format), fall back to reading the entire file
 
 ## First-Time Setup
 
@@ -84,27 +152,28 @@ Execute these steps in order:
 2. **Get current branch**: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh branch`
 3. **Module confirmation**: Run the Module Confirmation steps above to determine review scope
 4. **Get changed files**: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh files {base_branch}`, filter to confirmed modules only
-5. **Read specifications**: Read bilibili-standards.md and alibaba-huangshan.md from references. Read each confirmed module's `docs/project-standards.md` if it exists.
-6. **For each changed file**:
+5. **For each changed file**:
    a. Get the diff: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh diff {base_branch} {file}`
    b. Read the full file for context
-   c. Identify file type and layer (controller/service/dao/entity/mapper XML/SQL etc.)
-   d. Review against applicable rules from all three specification layers
-   e. For each issue found, record: file, line, rule ID, severity, description, suggested fix
-7. **Duplicate code detection (B-107)**: Extract code blocks ≥4 lines from this diff (new/modified lines only). Search the entire module for similar existing code. Only flag duplicates where at least one side is part of this change — skip pre-existing duplicates that were not modified in this branch.
-8. **Aggregate similar issues**: Group issues with same rule ID + same fix pattern into groups (G-NNN)
-9. **Generate output files** in `{module}/docs/{branch-name}/`:
+   c. **Determine file type and layer**: identify extension (.java/.sql/.xml) and layer from package path (match keywords: controller, service, dao, entity, dto, config, util, test, etc.)
+   d. **Load applicable rules**: use the Rule Loading Mapping Table to determine which category files to read from `references/alibaba/` and `references/bilibili/`. Skip files already cached in this session.
+   e. **Load project standards selectively**: read only the relevant layer section from `{module}/docs/project-standards.md` (see Rule Loading Mapping Table → Project Standards Selective Loading)
+   f. Review against applicable rules from all three specification layers
+   g. For each issue found, record: file, line, rule ID, severity, description, suggested fix
+6. **Duplicate code detection (B-107)**: Extract code blocks ≥4 lines from this diff (new/modified lines only). Search the entire module for similar existing code. Only flag duplicates where at least one side is part of this change — skip pre-existing duplicates that were not modified in this branch.
+7. **Aggregate similar issues**: Group issues with same rule ID + same fix pattern into groups (G-NNN)
+8. **Generate output files** in `{module}/docs/{branch-name}/`:
    - Read `${CLAUDE_PLUGIN_ROOT}/references/review-templates.md` for exact format
    - Write `review-report.md` — issue summary
    - Write `review-fixes.md` — fix comparison with markdown table + unified diff
    - Write `review-changes.patch` — patch file with issue/group markers for selective rollback
-10. **Output summary**: Print total issues by severity, list of modules scanned
+9. **Output summary**: Print total issues by severity, list of modules scanned
 
 Do NOT modify any source code in this mode.
 
 ## Interactive Mode (`interactive` argument)
 
-1. Execute Batch Scan steps 1-8 (including Module Confirmation)
+1. Execute Batch Scan steps 1-7 (including Module Confirmation)
 2. For each issue (ordered by severity: error first, then warning, then info):
    a. Display: issue number, severity, file:line, rule reference, description
    b. Show: original code vs suggested fix (markdown table + diff)
