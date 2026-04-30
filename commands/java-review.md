@@ -6,6 +6,8 @@ argument-hint: [interactive|fix|rollback|init]
 
 Perform Java code review using a three-layer specification system.
 
+**IMPORTANT**: When you call the AskUserQuestion tool, you MUST stop generating and wait for the user's response. Do NOT continue executing subsequent steps until the user has answered. The AskUserQuestion tool is a blocking interaction point.
+
 ## Argument Dispatch
 
 Parse `$ARGUMENTS` to determine the sub-command:
@@ -118,11 +120,11 @@ Before executing any sub-command, check if this is the first run:
 
 1. Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh base-candidates` to detect candidate base branches (main/master/release_prod/prod/prd/develop)
 2. Check if any `docs/project-standards.md` exists in the project
-3. If not found:
-   a. If multiple candidates detected, use the AskUserQuestion tool to let user select the base branch. Each candidate should be an option.
-   b. If one candidate detected, use the AskUserQuestion tool to confirm: "检测到主分支为 {branch}，是否正确？" with options "是" and "手动输入其他分支"
-   c. If no candidates detected, ask user in plain text to provide the base branch name
-   d. After branch is confirmed, run `/java-review init` automatically to scan architecture and generate `docs/project-standards.md` for selected modules
+3. If not found, tell user: "检测到项目尚未初始化 project-standards.md，需要先确认生产分支。" Then:
+   a. If multiple candidates detected, use the AskUserQuestion tool to let user select the base branch (referred to as "生产分支" in user-facing text). Each candidate should be an option. **STOP here and wait for the user's response before proceeding.**
+   b. If one candidate detected, use the AskUserQuestion tool to confirm: "检测到生产分支为 {branch}，是否正确？" with options "是" and "手动输入其他分支". **STOP here and wait for the user's response before proceeding.**
+   c. If no candidates detected, ask user in plain text to provide the base branch name. **STOP here and wait for the user's response before proceeding.**
+   d. After branch is confirmed (user has responded), run `/java-review init` automatically to scan architecture and generate `docs/project-standards.md` for selected modules
    e. If user explicitly skips init, create a minimal `docs/project-standards.md` with just the base_branch setting
 
 ## Module Confirmation (multi-module projects)
@@ -135,12 +137,12 @@ Detect and confirm module scope. Behavior differs between first-time init and su
 2. **If single-module**: use project root as the only module, no confirmation needed
 3. **If multi-module (first-time init)**:
    - List all detected modules
-   - Use the AskUserQuestion tool with multiSelect:true to let user select which modules to initialize. Each module name should be an option.
+   - Use the AskUserQuestion tool with multiSelect:true to let user select which modules to initialize. Each module name should be an option. **STOP here and wait for the user's response before proceeding.**
    - Only init selected modules; unselected modules are skipped entirely
 4. **If multi-module (subsequent review runs)**:
    - Identify which modules already have `docs/project-standards.md` (已初始化)
    - Only review changed files belonging to已初始化 modules
-   - If diff contains changes in未初始化 modules, use the AskUserQuestion tool to ask: "以下模块尚未初始化：{modules}，是否现在初始化？" with options "是，初始化这些模块" and "跳过，只审查已初始化模块"
+   - If diff contains changes in未初始化 modules, use the AskUserQuestion tool to ask: "以下模块尚未初始化：{modules}，是否现在初始化？" with options "是，初始化这些模块" and "跳过，只审查已初始化模块". **STOP here and wait for the user's response before proceeding.**
      - If yes → run init for those modules, then include in review
      - If no → skip those modules, only review已初始化 modules
 
@@ -226,7 +228,7 @@ Do NOT modify any source code in this mode.
       - interceptor, filter, aspect → 切面/拦截器
    c. Collect all unrecognized packages across all modules into a single list
 3. **Batch confirm unrecognized packages** (if any):
-   - Use the AskUserQuestion tool to present all unrecognized packages in one question. List them in the question text as `{module}/{package-path} → ?`, and provide layer options (接口层/业务逻辑层/数据访问层/公共工具/忽略) for user to choose.
+   - Use the AskUserQuestion tool to present all unrecognized packages in one question. List them in the question text as `{module}/{package-path} → ?`, and provide layer options (接口层/业务逻辑层/数据访问层/公共工具/忽略) for user to choose. **STOP here and wait for the user's response before proceeding.**
    - User can assign layer classification or mark as "忽略"
 4. **Scan dependencies**:
    - Read `build.gradle` or `pom.xml` for each module
