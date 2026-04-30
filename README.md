@@ -21,6 +21,14 @@ claude plugin install java-review
 
 安装后重启 Claude Code 即可使用。
 
+## 更新
+
+```bash
+claude plugin update java-review
+```
+
+更新后重启 Claude Code 生效。
+
 ## 使用
 
 在 Java 项目目录下：
