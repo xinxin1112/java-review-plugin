@@ -70,7 +70,7 @@ Execute these steps in order:
    c. Identify file type and layer (controller/service/dao/entity/mapper XML/SQL etc.)
    d. Review against applicable rules from all three specification layers
    e. For each issue found, record: file, line, rule ID, severity, description, suggested fix
-7. **Duplicate code detection (B-107)**: For code blocks ≥4 lines in the diff, search the entire module for similar code using grep/find. Flag duplicates.
+7. **Duplicate code detection (B-107)**: Extract code blocks ≥4 lines from this diff (new/modified lines only). Search the entire module for similar existing code. Only flag duplicates where at least one side is part of this change — skip pre-existing duplicates that were not modified in this branch.
 8. **Aggregate similar issues**: Group issues with same rule ID + same fix pattern into groups (G-NNN)
 9. **Generate output files** in `{module}/docs/{branch-name}/`:
    - Read `${CLAUDE_PLUGIN_ROOT}/references/review-templates.md` for exact format
