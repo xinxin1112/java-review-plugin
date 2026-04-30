@@ -1,0 +1,9 @@
+{
+  "name": "java-review",
+  "version": "1.0.0",
+  "description": "Java 代码审查插件 — 三层规范体系、批量/交互模式、自动修复与回滚",
+  "author": {
+    "name": "a6667"
+  },
+  "keywords": ["java", "code-review", "bilibili", "alibaba"]
+}
