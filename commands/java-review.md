@@ -127,8 +127,8 @@ Before executing any sub-command, check if this is the first run:
 1. Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh base-candidates` to detect candidate base branches (main/master/release_prod/prod/prd/develop)
 2. Check if any `docs/project-standards.md` exists in the project
 3. If not found, tell user: "检测到项目尚未初始化 project-standards.md，需要先确认生产分支。" Then call AskUserQuestion as described below and END YOUR RESPONSE IMMEDIATELY — do not proceed to step 4 or any other steps:
-   a. If multiple candidates detected: call AskUserQuestion to let user select the base branch (referred to as "生产分支" in user-facing text). Each candidate should be an option.
-   b. If one candidate detected: call AskUserQuestion to confirm: "检测到生产分支为 {branch}，是否正确？" with options "是" and "手动输入其他分支".
+   a. If multiple candidates detected: call AskUserQuestion with question "检测到以下候选生产分支，请选择：" and each detected branch name as an option (e.g., "main", "release_prod", "develop").
+   b. If one candidate detected: call AskUserQuestion with question "检测到生产分支为 {branch}，是否正确？" with options "是" and "手动输入其他分支".
    c. If no candidates detected: ask user in plain text to provide the base branch name.
 4. (ONLY execute this step in a NEW response after the user has answered step 3) After branch is confirmed, run `/java-review init` automatically to scan architecture and generate `docs/project-standards.md` for selected modules
 5. If user explicitly skips init, create a minimal `docs/project-standards.md` with just the base_branch setting
