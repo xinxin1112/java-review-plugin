@@ -1,6 +1,6 @@
 ---
 description: Java 代码审查 — 支持三层规范体系、批量/交互模式、自动修复与回滚
-allowed-tools: Bash(git *), Bash(find *), Bash(grep *), Bash(wc *), Bash(chmod *), Bash(cat *), Read, Edit, Write, Agent, AskUserQuestion
+allowed-tools: Bash(git *), Bash(find *), Bash(grep *), Bash(wc *), Bash(chmod *), Bash(cat *), Read, Edit, Write, Agent
 argument-hint: [interactive|fix|rollback|init]
 ---
 
@@ -22,15 +22,22 @@ Check conditions below IN ORDER. Execute ONLY the first matching phase. Ignore a
 **Scope: This is your COMPLETE and ONLY task for this response. There are no follow-up steps.**
 
 1. Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh base-candidates` to detect candidate branches
-2. Tell user: "检测到项目尚未初始化 project-standards.md，需要先确认生产分支。"
-3. Call AskUserQuestion with the detected branches:
-   - If multiple candidates: question="检测到以下候选生产分支，请选择：" with each branch name as an option
-   - If one candidate: question="检测到生产分支为 {branch}，是否正确？" with options "是" and "手动输入其他分支"
-   - If no candidates: question="请输入项目的生产分支名称：" with options "main", "master", "develop"
+2. Output the following message to the user (replace `{branches}` with a numbered list of detected branches):
 
-**AskUserQuestion is your final action. Do not output anything after it. Your response is complete.**
+```
+检测到项目尚未初始化 project-standards.md，需要先确认生产分支。
 
-When the user answers (in their next message), execute `/java-review init` with the selected branch to generate project-standards.md.
+检测到以下候选分支：
+{branches}
+
+请回复分支编号或名称继续初始化。
+```
+
+If only one candidate is detected, output: "检测到生产分支为 {branch}，回复 Y 确认或输入其他分支名称。"
+
+**Your task is complete. Wait for the user to reply.**
+
+When the user replies with their choice, execute `/java-review init` with the selected branch to generate project-standards.md.
 
 ---
 
@@ -140,9 +147,9 @@ When reading `{module}/docs/project-standards.md`:
 2. Only read the layer section matching the current file's detected layer (e.g., `### 接口层` for controller files)
 3. If no section markers found (old format), fall back to reading the entire file
 
-## AskUserQuestion Protocol
+## User Interaction Protocol
 
-Every AskUserQuestion call MUST be your final action in the current response. The runtime cannot render the interactive dialog until your response stream ends. If you generate anything after it, the dialog stays in "pending" state and the user cannot interact with it.
+When you need user input (branch selection, module selection, package classification), output the question as plain text with numbered options. Then STOP — your response is complete. Wait for the user to reply before continuing.
 
 ## Module Confirmation (multi-module projects)
 
@@ -153,14 +160,14 @@ Detect and confirm module scope. Behavior differs between first-time init and su
    - Check for `pom.xml` with `<modules>` → Maven multi-module
 2. **If single-module**: use project root as the only module, no confirmation needed
 3. **If multi-module (first-time init)**:
-   - List all detected modules
-   - Call AskUserQuestion with multiSelect:true to let user select which modules to initialize. Each module name should be an option.
-   - **AskUserQuestion is your final action.** When user answers, only init selected modules.
+   - List all detected modules as a numbered list
+   - Output: "请输入要初始化的模块编号（逗号分隔，如 1,3,5），或输入 all 初始化全部："
+   - **Stop and wait for user reply.** Then only init selected modules.
 4. **If multi-module (subsequent review runs)**:
    - Identify which modules already have `docs/project-standards.md` (已初始化)
    - Only review changed files belonging to已初始化 modules
-   - If diff contains changes in未初始化 modules: call AskUserQuestion to ask "以下模块尚未初始化：{modules}，是否现在初始化？" with options "是，初始化这些模块" and "跳过，只审查已初始化模块".
-   - **AskUserQuestion is your final action.** When user answers: yes → init those modules then review; no → skip them.
+   - If diff contains changes in未初始化 modules, output: "以下模块尚未初始化：{modules}。输入 Y 现在初始化，或输入 N 跳过只审查已初始化模块："
+   - **Stop and wait for user reply.** Then proceed accordingly.
 
 ## Batch Scan Mode (default, no arguments)
 
@@ -244,8 +251,9 @@ Do NOT modify any source code in this mode.
       - interceptor, filter, aspect → 切面/拦截器
    c. Collect all unrecognized packages across all modules into a single list
 3. **Batch confirm unrecognized packages** (if any):
-   - Call AskUserQuestion to present all unrecognized packages in one question. List them in the question text as `{module}/{package-path} → ?`, and provide layer options (接口层/业务逻辑层/数据访问层/公共工具/忽略) for user to choose.
-   - **AskUserQuestion is your final action.** When user answers, apply their classifications and continue to step 4.
+   - Output all unrecognized packages as a numbered list in format: `{N}. {module}/{package-path} → ?`
+   - Output: "请为以上未识别的包指定层级（接口层/业务逻辑层/数据访问层/公共工具/忽略），格式如：1=业务逻辑层, 3=忽略"
+   - **Stop and wait for user reply.** Then apply their classifications and continue to step 4.
 4. **Scan dependencies**:
    - Read `build.gradle` or `pom.xml` for each module
    - Identify: Spring Boot version, ORM (MyBatis/JPA), cache (Redis), MQ (Kafka/RocketMQ), database
