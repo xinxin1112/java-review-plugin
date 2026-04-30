@@ -27,6 +27,19 @@ claude plugin install java-review
 claude plugin update java-review
 ```
 
+> **已知问题：** `claude plugin update` 可能不会自动拉取最新版本（本地 marketplace 缓存未执行 git pull）。如果更新后版本号没变，手动执行：
+>
+> ```bash
+> cd ~/.claude/plugins/marketplaces/java-review-marketplace && git pull origin main
+> ```
+>
+> 或者卸载后重新安装：
+>
+> ```bash
+> claude plugin remove java-review
+> claude plugin install java-review
+> ```
+
 更新后重启 Claude Code 生效。
 
 ## 使用
