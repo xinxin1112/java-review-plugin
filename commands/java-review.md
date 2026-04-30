@@ -116,7 +116,7 @@ When reading `{module}/docs/project-standards.md`:
 
 Before executing any sub-command, check if this is the first run:
 
-1. Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh base-candidates` to detect candidate base branches (main/master/release_prod/prod/develop)
+1. Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh base-candidates` to detect candidate base branches (main/master/release_prod/prod/prd/develop)
 2. Check if any `docs/project-standards.md` exists in the project
 3. If not found:
    a. If multiple candidates detected, ask user to select the base branch (AskUserQuestion with options)
