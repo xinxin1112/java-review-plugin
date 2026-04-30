@@ -238,7 +238,7 @@ Do NOT modify any source code in this mode.
 
 1. **Module confirmation**: Run the Module Confirmation steps above to determine which modules to initialize
 2. **For each selected module**, scan `src/main/java/` directory:
-   a. List all packages using `find {module}/src/main/java -type d`
+   a. Detect the base package (first directory containing `.java` files or having multiple sub-packages), then list packages only 2 levels deep below it: `find {base-package-dir} -maxdepth 2 -type d`
    b. Auto-classify packages by name:
       - controller, api → 接口层
       - service, biz → 业务逻辑层

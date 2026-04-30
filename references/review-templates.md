@@ -11,14 +11,47 @@ These templates define the exact format for java-review output documents. Follow
 - **基准分支:** {base-branch}
 - **扫描时间:** {YYYY-MM-DD HH:mm:ss}
 - **扫描文件数:** {count}
-- **问题总数:** {total} (error: {n}, warning: {n}, info: {n})
 
-## 问题列表
+## 问题汇总
 
-### #{NNN} [{severity}] {brief-description}
-- **文件:** {relative-path}:{line-number}
-- **规范:** {rule-id} {rule-title}【{level}】
-- **说明:** {explanation}
+| 级别 | 数量 | 已修复 |
+|------|------|--------|
+| 🔴 阻断（必须修改） | {n} | {fixed_n} |
+| 🟡 警告（建议修改） | {n} | {fixed_n} |
+| 🔵 建议（可选优化） | {n} | {fixed_n} |
+
+## 总体评价
+
+{2-3 句话概括本次变更的整体质量、主要风险点和建议优先处理方向}
+
+## 详细问题
+
+### 🔴 阻断问题
+
+#### #{NNN} {brief-title}
+- **位置：** `{ClassName}.{methodName}()` — {行为描述}
+- **问题描述：** {具体违反了什么规范，为什么是问题}
+- **修改建议：** {如何修复}
+- **规范：** {rule-id}【{level}】
+
+#### #{NNN} {brief-title}
+...
+
+### 🟡 警告问题
+
+#### #{NNN} {brief-title}
+- **位置：** `{ClassName}.{methodName}()` — {行为描述}
+- **问题描述：** {具体违反了什么规范，为什么是问题}
+- **修改建议：** {如何修复}
+- **规范：** {rule-id}【{level}】
+
+### 🔵 建议优化
+
+#### #{NNN} {brief-title}
+- **位置：** `{ClassName}.{methodName}()` — {行为描述}
+- **问题描述：** {具体违反了什么规范，为什么是问题}
+- **修改建议：** {如何修复}
+- **规范：** {rule-id}【{level}】
 
 ## 同类问题组
 
@@ -31,7 +64,11 @@ These templates define the exact format for java-review output documents. Follow
 ### Numbering Rules
 - Issues: `#001`, `#002`, ... (zero-padded 3 digits)
 - Groups: `G-001`, `G-002`, ... (zero-padded 3 digits)
-- Severity values: `error`, `warning`, `info`
+- Severity mapping: `error` → 🔴 阻断, `warning` → 🟡 警告, `info` → 🔵 建议
+
+### Dynamic Update
+- When fixes are applied (via `fix` mode), update the "已修复" column in the summary table
+- Mark fixed issues with ~~strikethrough~~ on the title line: `#### ~~#{NNN} {title}~~ ✅`
 
 ## 2. review-fixes.md Template
 
