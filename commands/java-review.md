@@ -52,8 +52,19 @@ Before executing any sub-command, check if this is the first run:
 2. Check if any `docs/project-standards.md` exists in the project
 3. If not found:
    a. Ask the user to confirm the base branch name (main/master/other)
-   b. Suggest running `/java-review init` to scan project architecture
-   c. If user skips init, create a minimal `docs/project-standards.md` with just the base_branch setting
+   b. Run `/java-review init` automatically to scan architecture and generate `docs/project-standards.md` for each module
+   c. If user explicitly skips init, create a minimal `docs/project-standards.md` with just the base_branch setting
+
+## Module Confirmation (multi-module projects)
+
+Before scanning, detect and confirm module scope. This applies to EVERY run, not just first-time:
+
+1. **Detect project structure**:
+   - Check for `settings.gradle` / `settings.gradle.kts` → Gradle multi-module
+   - Check for `pom.xml` with `<modules>` → Maven multi-module
+2. **If multi-module**: list all detected modules and ask user to confirm which modules to include in this review
+3. **If single-module**: use project root as the only module, no confirmation needed
+4. Only scan changed files that belong to confirmed modules
 
 ## Batch Scan Mode (default, no arguments)
 
@@ -61,9 +72,9 @@ Execute these steps in order:
 
 1. **Get base branch** from `docs/project-standards.md` frontmatter (`base_branch` field)
 2. **Get current branch**: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh branch`
-3. **Get changed files**: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh files {base_branch}`
-4. **Detect modules**: For each changed file, run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh module {file}` to group files by module
-5. **Read specifications**: Read bilibili-standards.md and alibaba-huangshan.md from references. Read each module's `docs/project-standards.md` if it exists.
+3. **Module confirmation**: Run the Module Confirmation steps above to determine review scope
+4. **Get changed files**: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh files {base_branch}`, filter to confirmed modules only
+5. **Read specifications**: Read bilibili-standards.md and alibaba-huangshan.md from references. Read each confirmed module's `docs/project-standards.md` if it exists.
 6. **For each changed file**:
    a. Get the diff: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/diff-helper.sh diff {base_branch} {file}`
    b. Read the full file for context
@@ -83,7 +94,7 @@ Do NOT modify any source code in this mode.
 
 ## Interactive Mode (`interactive` argument)
 
-1. Execute Batch Scan steps 1-8 (same scanning logic)
+1. Execute Batch Scan steps 1-8 (including Module Confirmation)
 2. For each issue (ordered by severity: error first, then warning, then info):
    a. Display: issue number, severity, file:line, rule reference, description
    b. Show: original code vs suggested fix (markdown table + diff)
@@ -121,11 +132,8 @@ Do NOT modify any source code in this mode.
 
 ## Init Mode (`init` argument)
 
-1. **Detect project type**:
-   - Check for `settings.gradle` / `settings.gradle.kts` → Gradle multi-module
-   - Check for `pom.xml` with `<modules>` → Maven multi-module
-   - List all submodules
-2. **For each module**, scan `src/main/java/` directory:
+1. **Module confirmation**: Run the Module Confirmation steps above to determine which modules to initialize
+2. **For each confirmed module**, scan `src/main/java/` directory:
    a. List all packages using `find {module}/src/main/java -type d`
    b. Auto-classify packages by name:
       - controller, api → 接口层
